@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=4
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=AS_DatePicker,CreateASDatePicker_HeaderProperties,1537,0,AS_DatePicker,MonthBetween,1536,0,AS_DatePicker,setHeaderColor,1015,0,AS_DatePicker,CreateHeader,271,3,AS_DatePicker,AddWeekName,301,0,AS_DatePicker,RefreshHeader,902,4,AS_DatePicker,ini_viewpager,250,0,AS_DatePicker,IniProps,227,1,AS_DatePicker,DesignerCreateView,173,0,AS_DatePicker,setBodyColor,1040,0
+NavigationStack=AS_DatePicker,AddYear,1055,0,AS_DatePicker,xASVP_Main_PageChange,1542,6,AS_DatePicker,xASVP_Main_LazyLoadingAddContent,1541,0,AS_DatePicker,xASVP_Main_PageChanged2,480,5,AS_DatePicker,CreateMonthView,576,4,B4XMainPage,AS_DatePicker1_SelectedDateChanged,51,0,B4XMainPage,AS_DatePicker1_PageChanged,68,0,Visual Designer,frm_main.bil,-100,6,B4XMainPage,B4XPage_Created,42,6
 SelectedBuild=0
 VisibleModules=2,1

@@ -81,8 +81,35 @@ V1.20
 V1.21
 	-BugFixes
 	-Add ArrowsVisible to Type HeaderProperties
+V1.22
+	-Big performance improvements
+		-The view should now load much faster
+V1.23
+	-Add Event PageChanged
+V1.24
+	-Add get CurrentView
+	-Add Event CustomDrawHeader
+	-BugFixes
+V1.25
+	-Add "Height" to ASDatePicker_WeekNameProperties
+		-Default: 20dip
+	-Add "CurrentAndSelectedDayHeight" to ASDatePicker_BodyProperties
+		-Default: 30dip
+	-Add "SelectedTextColor" to ASDatePicker_BodyProperties
+		-Default: White
+V1.26
+	-Important crash fix
+V1.27
+	-BugFixes and Improvements
+	-Add Themes - You can now switch to Light or Dark mode
+		-Add set Theme
+		-Add get Theme_Dark
+		-Add get Theme_Light
+	-Add Designer Property ThemeChangeTransition
+		-Default: Fade
 #End If
 
+#DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
 #DesignerProperty: Key: SelectMode, DisplayName: Select Mode, FieldType: String, DefaultValue: Date, List: Date|Month|Range
 #DesignerProperty: Key: HeaderColor, DisplayName: Header Color, FieldType: Color, DefaultValue: 0xFF131416, Description: Background Color of the week days
 #DesignerProperty: Key: BodyColor, DisplayName: Body Color, FieldType: Color, DefaultValue: 0xFF202125
@@ -101,6 +128,8 @@ V1.21
 #Event: SelectedDateChanged(Date As Long)
 #Event: SelectedDateRangeChanged(StartDate As Long, EndDate As Long)
 #Event: CustomDrawDay (Date As Long, Views As ASDatePicker_CustomDrawDay)
+#Event: PageChanged
+#Event: CustomDrawHeader(Date As Long,Views As ASDatePicker_CustomDrawHeader)
 
 Sub Class_Globals
 	
@@ -108,10 +137,11 @@ Sub Class_Globals
 	Type ASDatePicker_WeekNameShort(Monday As String,Tuesday As String,Wednesday As String,Thursday As String,Friday As String,Saturday As String,Sunday As String)
 	
 	Type ASDatePicker_HeaderProperties(Height As Float,xFont As B4XFont,TextColor As Int,ButtonIconSize As Float,ArrowsVisible As Boolean)
-	Type ASDatePicker_BodyProperties(xFont As B4XFont,TextColor As Int)
+	Type ASDatePicker_BodyProperties(xFont As B4XFont,TextColor As Int,SelectedTextColor As Int,CurrentAndSelectedDayHeight As Float)
 	Type ASDatePicker_CustomDrawDay(BackgroundPanel As B4XView,xlbl_Date As B4XView)
+	Type ASDatePicker_CustomDrawHeader(BackgroundPanel As B4XView,xlbl_Text As B4XView,xlbl_ArrowLeft As B4XView,xlbl_ArrowRight As B4XView)
 	Type ASDatePicker_WeekNumberProperties(Width As Float,Color As Int,xFont As B4XFont,TextColor As Int,Text As String)
-	Type ASDatePicker_WeekNameProperties(Color As Int,xFont As B4XFont,TextColor As Int)
+	Type ASDatePicker_WeekNameProperties(Color As Int,xFont As B4XFont,TextColor As Int,Height As Float)
 	
 	Private mEventName As String 'ignore
 	Private mCallBack As Object 'ignore
@@ -151,13 +181,97 @@ Sub Class_Globals
 	Private m_FirstDayOfWeek As Int = 5 'Monday
 	Private m_ShowGridLines As Boolean
 	Private m_GridLineColor As Int
+	Private m_ThemeChangeTransition As String
 	
 	Private m_CurrentView As String
 	Private m_StartDate As Long
 	Private m_InactiveDaysVisible As Boolean
 	Private m_MinDate,m_MaxDate As Long
 	Private m_SelectMode As String
-	Private m_WeekNameHeight As Float = 20dip
+	
+	Private xiv_RefreshImage As B4XView
+	
+	Type AS_DatePicker_Theme(SelectedTextColor As Int,WeekNumberTextColor As Int,WeekNumberColor As Int,WeekNameColor As Int,WeekNameTextColor As Int,HeaderTextColor As Int,BodyTextColor As Int,GridLineColor As Int,SelectedDateColor As Int,CurrentDateColor As Int,HeaderColor As Int,BodyColor As Int)
+	
+End Sub
+
+Public Sub setTheme(Theme As AS_DatePicker_Theme)
+	
+	xiv_RefreshImage.SetBitmap(mBase.Snapshot)
+	xiv_RefreshImage.SetVisibleAnimated(0,True)
+	
+	m_BodyColor = Theme.BodyColor
+	m_HeaderColor = Theme.HeaderColor
+	m_CurrentDateColor = Theme.CurrentDateColor
+	m_SelectedDateColor = Theme.SelectedDateColor
+	m_GridLineColor = Theme.GridLineColor
+	g_BodyProperties.TextColor = Theme.BodyTextColor
+	g_HeaderProperties.TextColor = Theme.HeaderTextColor
+	g_WeekNameProperties.Color = Theme.WeekNameColor
+	g_WeekNameProperties.TextColor = Theme.WeekNameTextColor
+	g_WeekNumberProperties.Color = Theme.WeekNumberColor
+	g_WeekNumberProperties.TextColor = Theme.WeekNumberTextColor
+	g_BodyProperties.SelectedTextColor = Theme.SelectedTextColor
+	
+	Sleep(0)
+	
+	xpnl_LoadingPanel.Color = m_BodyColor
+	xASVP_Main.LoadingPanelColor = m_BodyColor
+	xASVP_Main.Base.Color = m_BodyColor
+	
+	RefreshHeader
+	Refresh
+	
+	Sleep(250)
+	
+	Select m_ThemeChangeTransition
+		Case "None"
+			xiv_RefreshImage.SetVisibleAnimated(0,False)
+		Case "Fade"
+			xiv_RefreshImage.SetVisibleAnimated(250,False)
+	End Select
+	
+End Sub
+
+Public Sub getTheme_Dark As AS_DatePicker_Theme
+	
+	Dim Theme As AS_DatePicker_Theme
+	Theme.Initialize
+	Theme.BodyColor = 0xFF202125
+	Theme.HeaderColor = 0xFF202125
+	Theme.CurrentDateColor = 0x502D8879
+	Theme.SelectedDateColor = 0xFF2D8879
+	Theme.GridLineColor = xui.Color_ARGB(80,255,255,255)
+	Theme.BodyTextColor = xui.Color_White
+	Theme.SelectedTextColor = xui.Color_White
+	Theme.HeaderTextColor = xui.Color_White
+	Theme.WeekNameColor =  0xFF202125'xui.Color_ARGB(255,32, 33, 37)
+	Theme.WeekNameTextColor = xui.Color_White
+	Theme.WeekNumberColor = xui.Color_ARGB(255,32, 33, 37)
+	Theme.WeekNumberTextColor = xui.Color_White
+	
+	Return Theme
+	
+End Sub
+
+Public Sub getTheme_Light As AS_DatePicker_Theme
+	
+	Dim Theme As AS_DatePicker_Theme
+	Theme.Initialize
+	Theme.BodyColor = xui.Color_White
+	Theme.HeaderColor = xui.Color_White
+	Theme.CurrentDateColor = 0x502D8879
+	Theme.SelectedDateColor = 0xFF2D8879
+	Theme.GridLineColor = xui.Color_ARGB(80,0,0,0)
+	Theme.BodyTextColor = xui.Color_Black
+	Theme.SelectedTextColor = xui.Color_White
+	Theme.HeaderTextColor = xui.Color_Black
+	Theme.WeekNameColor = xui.Color_White'xui.Color_ARGB(255,235, 235, 235)
+	Theme.WeekNameTextColor = xui.Color_Black
+	Theme.WeekNumberColor = xui.Color_White
+	Theme.WeekNumberTextColor = xui.Color_Black
+	
+	Return Theme
 	
 End Sub
 
@@ -176,7 +290,7 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 	'm_SelectedDate = DateTime.Now
 	
 	xpnl_LoadingPanel = xui.CreatePanel("")
-	xpnl_LoadingPanel.Visible = False
+	xpnl_LoadingPanel.Visible = True
 	xpnl_LoadingPanel.Color = m_BodyColor
 	mBase.AddView(xpnl_LoadingPanel,0,0,mBase.Width,mBase.Height)
 	
@@ -196,9 +310,16 @@ Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)
 		CreateYearView
 	End If
 	
+	xiv_RefreshImage = CreateImageView("")
+	xiv_RefreshImage.Visible = False
+	mBase.AddView(xiv_RefreshImage,0,0,mBase.Width,mBase.Height)
+	
 	#If B4A
 	Base_Resize(mBase.Width,mBase.Height)
 	#End If
+	
+	xpnl_LoadingPanel.SetVisibleAnimated(250,False)
+	
 End Sub
 
 Private Sub IniProps(Props As Map)
@@ -215,6 +336,7 @@ Private Sub IniProps(Props As Map)
 	m_ShowWeekNumbers = Props.GetDefault("ShowWeekNumbers",False)
 	m_ShowGridLines = Props.GetDefault("ShowGridLines",False)
 	m_GridLineColor = xui.PaintOrColorToColor(Props.GetDefault("GridLineColor",0x50FFFFFF))
+	m_ThemeChangeTransition = Props.GetDefault("ThemeChangeTransition","Fade")
 	
 	If "Friday" = Props.Get("FirstDayOfWeek") Then
 		m_FirstDayOfWeek = 1
@@ -234,8 +356,8 @@ Private Sub IniProps(Props As Map)
 	
 	g_WeekNumberProperties = CreateASDatePicker_WeekNumberProperties(20dip,xui.Color_ARGB(255,32, 33, 37),xui.CreateDefaultFont(10),xui.Color_White,"")
 	g_HeaderProperties = CreateASDatePicker_HeaderProperties(40dip,xui.CreateDefaultBoldFont(12),xui.Color_White,15,True)
-	g_BodyProperties = CreateASDatePicker_BodyProperties(xui.CreateDefaultBoldFont(12),xui.Color_White)
-	g_WeekNameProperties = CreateASDatePicker_WeekNameProperties(xui.Color_ARGB(255,32, 33, 37),xui.CreateDefaultFont(10),xui.Color_White)
+	g_BodyProperties = CreateASDatePicker_BodyProperties(xui.CreateDefaultBoldFont(12),xui.Color_White,xui.Color_White,30dip)
+	g_WeekNameProperties = CreateASDatePicker_WeekNameProperties(xui.Color_ARGB(255,32, 33, 37),xui.CreateDefaultFont(10),xui.Color_White,20dip)
 
 	g_MonthNameShort = CreateASDatePicker_MonthNameShort("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec")
 	g_WeekNameShort = CreateASDatePicker_WeekNameShort("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
@@ -258,6 +380,7 @@ Private Sub ini_viewpager
 End Sub
 
 Private Sub Base_Resize (Width As Double, Height As Double)
+	xiv_RefreshImage.SetLayoutAnimated(0,0,0,Width,Height)
 	xpnl_Header.SetLayoutAnimated(0,0,0,Width,g_HeaderProperties.Height)
 	xpnl_ViewPager.SetLayoutAnimated(0,0,g_HeaderProperties.Height,Width,Height - g_HeaderProperties.Height)
 	xASVP_Main.Base_Resize(Width,xpnl_ViewPager.Height)
@@ -307,8 +430,8 @@ End Sub
 
 Private Sub AddWeekName(xpnl_Background As B4XView,i As Int,Text As String)
 	
-	Dim BlockHeight As Float = m_WeekNameHeight 'xpnl_ViewPager.Height/7
-	Dim BlockWidth As Float = IIf(m_ShowWeekNumbers,(xpnl_ViewPager.Width - g_WeekNumberProperties.Width)/7,IIf(i = -1,g_WeekNumberProperties.Width, xpnl_ViewPager.Width/7))
+	Dim BlockHeight As Float = g_WeekNameProperties.Height 'xpnl_ViewPager.Height/7
+	Dim BlockWidth As Float = Floor(IIf(m_ShowWeekNumbers,(xpnl_ViewPager.Width - g_WeekNumberProperties.Width)/7,IIf(i = -1,g_WeekNumberProperties.Width, xpnl_ViewPager.Width/7)))
 	
 	Dim xlbl_WeekName As B4XView = CreateLabel("")
 		
@@ -327,36 +450,114 @@ Private Sub AddWeekName(xpnl_Background As B4XView,i As Int,Text As String)
 	xpnl_Background.AddView(xlbl_WeekName,IIf(i = -1,0,IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*i)),0,IIf(i = -1,g_WeekNumberProperties.Width, BlockWidth),BlockHeight)
 End Sub
 
-Private Sub CreateMonthView
+Private Sub xASVP_Main_PageChanged2(NewIndex As Int, OldIndex As Int)
 	
-	Dim YearGap As Int = 5
+	If m_MinDate > 0 And m_MaxDate > 0 Then Return
 	
-	#If B4J
-	YearGap = 20
-	#End If
+	Dim Forward As Boolean = False
+	Dim DoIt As Boolean = False
 	
-	Dim StartDate As Long
-	If m_MinDate = 0 Then
-		#If Debug
-		Dim peri As Period
-		peri.Initialize
-		peri.Months = -2
-		StartDate =	DateUtils.AddPeriod(m_StartDate,peri)
-		#Else
-		StartDate =	DateUtils.SetDate(DateTime.GetYear(m_StartDate)-YearGap,1,1)
-		#End If
-		
+	If NewIndex <= OldIndex Then
+		If NewIndex <= 2 Then
+			DoIt = True
+			Forward = False
+		End If
 	Else
-		StartDate =	m_MinDate
+		If NewIndex = xASVP_Main.Size -2 Then
+			DoIt = True
+			Forward = True
+		End If
 	End If
 	
-	Dim FirstDateOfFuture As Long = DateUtils.SetDate(DateTime.GetYear(m_StartDate)+YearGap,12,31)
+	If DoIt Then
+		
+		If m_CurrentView = getCurrentView_MonthView Then
+			Dim xpnl_Background As B4XView = xui.CreatePanel("")
+			xpnl_Background.Color = xui.Color_Transparent
+			xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
 	
-	Dim NumberOfMonths As Int 
+			Dim p2 As Period
+			p2.Initialize
+			p2.Months = IIf(Forward,1,-1)
 	
-	If m_MaxDate = 0 Then
-		NumberOfMonths = MonthBetween(StartDate,FirstDateOfFuture)
-	Else
+			Dim CurrentTime As Long = DateUtils.AddPeriod(xASVP_Main.GetValue(IIf(Forward,xASVP_Main.Size -1,0)),p2)
+			Dim FirstDayOfMonth As Long = DateUtils.SetDate(DateTime.GetYear(CurrentTime),DateTime.GetMonth(CurrentTime),1)
+	
+			If Forward Then
+				If m_MaxDate > 0 And FirstDayOfMonth > DateUtils.SetDate(DateTime.GetYear(m_MaxDate),DateTime.GetMonth(m_MaxDate),1)  Then
+					Return
+				End If			
+				xASVP_Main.AddPage(xpnl_Background,FirstDayOfMonth)
+			Else
+				If m_MinDate > 0 And FirstDayOfMonth < DateUtils.SetDate(DateTime.GetYear(m_MinDate),DateTime.GetMonth(m_MinDate),1)  Then
+					Return
+				End If
+				xASVP_Main.AddPageAt(0,xpnl_Background,FirstDayOfMonth)
+			End If
+			
+		else If m_CurrentView = getCurrentView_YearView Then
+			
+			Dim xpnl_Background As B4XView = xui.CreatePanel("")
+			xpnl_Background.Color = xui.Color_Transparent
+			xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
+	
+			Dim p2 As Period
+			p2.Initialize
+			p2.Years = IIf(Forward,1,-1)
+	
+			Dim CurrentTime As Long = DateUtils.AddPeriod(xASVP_Main.GetValue(IIf(Forward,xASVP_Main.Size -1,0)),p2)
+			'Dim FirstDayOfMonth As Long = DateUtils.SetDate(DateTime.GetYear(CurrentTime),DateTime.GetMonth(CurrentTime),1)
+	
+			If Forward Then
+				If m_MaxDate > 0 And DateTime.GetYear(CurrentTime) > DateTime.GetYear(m_MaxDate)  Then
+					Return
+				End If
+				xASVP_Main.AddPage(xpnl_Background,CurrentTime)
+			Else
+				If m_MinDate > 0 And DateTime.GetYear(CurrentTime) < DateTime.GetYear(m_MinDate)  Then
+					Return
+				End If
+				xASVP_Main.AddPageAt(0,xpnl_Background,CurrentTime)
+			End If
+			
+		else If m_CurrentView = getCurrentView_DecadeView Then
+			
+			If Forward Then
+				
+				Dim xpnl_Background As B4XView = xui.CreatePanel("")
+				xpnl_Background.Color = xui.Color_Transparent
+				xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
+	
+				Dim p2 As Period
+				p2.Initialize
+				p2.Years = 10
+	
+				Dim CurrentTime As Long = DateUtils.AddPeriod(xASVP_Main.GetValue(xASVP_Main.Size -1),p2)
+				'Dim FirstDayOfMonth As Long = DateUtils.SetDate(DateTime.GetYear(CurrentTime),DateTime.GetMonth(CurrentTime),1)
+	
+				If m_MaxDate > 0 And DateTime.GetYear(CurrentTime) > DateTime.GetYear(m_MaxDate)  Then
+					Return
+				End If
+				xASVP_Main.AddPage(xpnl_Background,CurrentTime)
+				
+			End If
+			
+		End If
+		
+	End If
+End Sub
+
+Private Sub CreateMonthView
+	
+	Dim StartIndex As Int = 0
+	Dim YearGap As Int = 1
+	Dim StartDate As Long = DateUtils.SetDate(DateTime.GetYear(m_StartDate)-YearGap,DateTime.GetMonth(m_StartDate),1)
+	Dim Enddate As Long = DateUtils.SetDate(DateTime.GetYear(m_StartDate)+YearGap,DateTime.GetMonth(m_StartDate),1)
+	
+	If m_MinDate > 0 Then StartDate = m_MinDate
+	Dim NumberOfMonths As Int = IIf(m_MaxDate=0, MonthBetween(StartDate,Enddate),0)
+	
+	If m_MaxDate > 0 Then
 		Dim MonthsBetween As Int = MonthBetween(StartDate,m_MaxDate)
 		Dim tmp As Period
 		tmp.Initialize
@@ -365,16 +566,10 @@ Private Sub CreateMonthView
 		NumberOfMonths = Max(MonthsBetween,1)
 	End If
 	
-	Dim StartIndex As Int = 0
-	
-'	Log(DateUtils.TicksToString(FirstDateOfPast))
-'	Log(DateUtils.TicksToString(FirstDateOfFuture))
-'	Log(NumberOfMonths)
-	
 	For i = 0 To NumberOfMonths -1
-	
+		
 		Dim xpnl_Background As B4XView = xui.CreatePanel("")
-		xpnl_Background.Color = m_BodyColor
+		xpnl_Background.Color = xui.Color_Transparent
 		xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
 	
 		Dim p2 As Period
@@ -383,38 +578,112 @@ Private Sub CreateMonthView
 	
 		Dim CurrentTime As Long = DateUtils.AddPeriod(StartDate,p2)
 		Dim FirstDayOfMonth As Long = DateUtils.SetDate(DateTime.GetYear(CurrentTime),DateTime.GetMonth(CurrentTime),1)
-	
+		
 		xASVP_Main.AddPage(xpnl_Background,FirstDayOfMonth)
-	
+		
 		If DateTime.GetYear(m_StartDate) = DateTime.GetYear(CurrentTime) And DateTime.GetMonth(m_StartDate) = DateTime.GetMonth(CurrentTime) Then StartIndex = i
 
-	
 		
 	Next
 	
+	#If B4A
+	Sleep(250)
+	#Else
 	Sleep(0)
-
-	If StartIndex = 0 Then
-		xASVP_Main.CurrentIndex2 = StartIndex
-	Else
-		Do While  xASVP_Main.CurrentIndex = 0
-			Sleep(0)
-			If xASVP_Main.Size > 0 Then
-				xASVP_Main.CurrentIndex2 = StartIndex
-			End If
-		Loop
-	End If
-
-	Sleep(0)
+	#End If
+	
+	xASVP_Main.CurrentIndex2 = StartIndex
 	xASVP_Main.Commit
 	'Log(xASVP_Main.CustomListView.Size)
 	Sleep(0)
 	m_isReady = True
+	
+'	Dim YearGap As Int = 5
+'	
+'	#If B4J
+'	YearGap = 20
+'	#End If
+'	
+'	Dim StartDate As Long
+'	If m_MinDate = 0 Then
+'		#If Debug
+'		Dim peri As Period
+'		peri.Initialize
+'		peri.Months = -2
+'		StartDate =	DateUtils.AddPeriod(m_StartDate,peri)
+'		#Else
+'		StartDate =	DateUtils.SetDate(DateTime.GetYear(m_StartDate)-YearGap,1,1)
+'		#End If
+'		
+'	Else
+'		StartDate =	m_MinDate
+'	End If
+'	
+'	Dim FirstDateOfFuture As Long = DateUtils.SetDate(DateTime.GetYear(m_StartDate)+YearGap,12,31)
+'	
+'	Dim NumberOfMonths As Int 
+'	
+'	If m_MaxDate = 0 Then
+'		NumberOfMonths = MonthBetween(StartDate,FirstDateOfFuture)
+'	Else
+'		Dim MonthsBetween As Int = MonthBetween(StartDate,m_MaxDate)
+'		Dim tmp As Period
+'		tmp.Initialize
+'		tmp.Months = MonthsBetween
+'		If DateUtils.AddPeriod(StartDate,tmp) < m_MaxDate Then MonthsBetween = MonthsBetween +1
+'		NumberOfMonths = Max(MonthsBetween,1)
+'	End If
+'	
+'	Dim StartIndex As Int = 0
+'	
+''	Log(DateUtils.TicksToString(FirstDateOfPast))
+''	Log(DateUtils.TicksToString(FirstDateOfFuture))
+''	Log(NumberOfMonths)
+'	
+'	For i = 0 To NumberOfMonths -1
+'	
+'		Dim xpnl_Background As B4XView = xui.CreatePanel("")
+'		xpnl_Background.Color = m_BodyColor
+'		xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
+'	
+'		Dim p2 As Period
+'		p2.Initialize
+'		p2.Months = i
+'	
+'		Dim CurrentTime As Long = DateUtils.AddPeriod(StartDate,p2)
+'		Dim FirstDayOfMonth As Long = DateUtils.SetDate(DateTime.GetYear(CurrentTime),DateTime.GetMonth(CurrentTime),1)
+'	
+'		xASVP_Main.AddPage(xpnl_Background,FirstDayOfMonth)
+'	
+'		If DateTime.GetYear(m_StartDate) = DateTime.GetYear(CurrentTime) And DateTime.GetMonth(m_StartDate) = DateTime.GetMonth(CurrentTime) Then StartIndex = i
+'
+'	
+'		
+'	Next
+'	
+'	Sleep(0)
+
+'	If StartIndex = 0 Then
+'		xASVP_Main.CurrentIndex2 = StartIndex
+'	Else
+'		Do While  xASVP_Main.CurrentIndex = 0
+'			Sleep(0)
+'			If xASVP_Main.Size > 0 Then
+'				xASVP_Main.CurrentIndex2 = StartIndex
+'			End If
+'		Loop
+'	End If
+
+'	Sleep(0)
+'	xASVP_Main.Commit
+'	'Log(xASVP_Main.CustomListView.Size)
+'	Sleep(0)
+'	m_isReady = True
 End Sub
 
 Private Sub CreateYearView
 	
-	Dim YearGap As Int = 50
+	Dim YearGap As Int = 10
 	
 	Dim StartDate As Long
 	If m_MinDate = 0 Then
@@ -443,7 +712,7 @@ Private Sub CreateYearView
 	For i = 0 To NumberOfYears -1
 	
 		Dim xpnl_Background As B4XView = xui.CreatePanel("")
-		xpnl_Background.Color = m_BodyColor
+		xpnl_Background.Color = xui.Color_Transparent
 		xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
 	
 		Dim p2 As Period
@@ -462,16 +731,16 @@ Private Sub CreateYearView
 	Next
 	
 	Sleep(0)
-	If StartIndex = 0 Then
-		xASVP_Main.CurrentIndex2 = StartIndex
-	Else
-		Do While xASVP_Main.CurrentIndex = 0
-			Sleep(0)
-			xASVP_Main.CurrentIndex2 = StartIndex
-		Loop
-	End If
+'	If StartIndex = 0 Then
+'		xASVP_Main.CurrentIndex2 = StartIndex
+'	Else
+'		Do While xASVP_Main.CurrentIndex = 0
+'			Sleep(0)
+'			xASVP_Main.CurrentIndex2 = StartIndex
+'		Loop
+'	End If
 
-	Sleep(0)
+	xASVP_Main.CurrentIndex2 = StartIndex
 	xASVP_Main.Commit
 	'Log(xASVP_Main.CustomListView.Size)
 End Sub
@@ -484,7 +753,7 @@ Private Sub CreateDecadeView
 	
 	Dim CurrentDecade As Long = DateUtils.SetDate(DateTime.GetYear(DateUtils.SetDate(DateTime.GetYear(m_StartDate),1,1)),1,1)
 	'Log(DateUtils.TicksToString(CurrentDecade))
-	Dim YearGap As Int = 1000
+	Dim YearGap As Int = 50
 	
 	Dim StartDate As Long
 	If m_MinDate = 0 Then
@@ -512,7 +781,7 @@ Private Sub CreateDecadeView
 	For i = 0 To NumberOfDecades -1
 	
 		Dim xpnl_Background As B4XView = xui.CreatePanel("")
-		xpnl_Background.Color = m_BodyColor
+		xpnl_Background.Color = xui.Color_Transparent
 		xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
 	
 		Dim p2 As Period
@@ -532,7 +801,6 @@ Private Sub CreateDecadeView
 	
 	Sleep(0)
 	xASVP_Main.CurrentIndex2 = StartIndex
-	Sleep(0)
 	xASVP_Main.Commit
 	'Log(xASVP_Main.CustomListView.Size)
 End Sub
@@ -581,7 +849,7 @@ Private Sub CreateCenturyView
 	For i = 0 To NumberOfCentries -1
 	
 		Dim xpnl_Background As B4XView = xui.CreatePanel("")
-		xpnl_Background.Color = m_BodyColor
+		xpnl_Background.Color = xui.Color_Transparent
 		xpnl_Background.SetLayoutAnimated(0,0,0,xpnl_ViewPager.Width,xpnl_ViewPager.Height)
 	
 		p.Years = i*10*12
@@ -604,20 +872,15 @@ Private Sub CreateCenturyView
 	
 	Sleep(0)
 	xASVP_Main.CurrentIndex2 = StartIndex
-	Sleep(0)
 	xASVP_Main.Commit
 	'Log(xASVP_Main.CustomListView.Size)
 End Sub
 
 Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
-	Dim clr() As Int = GetARGB(m_SelectedDateColor)
-	If m_ShowGridLines Then
-		Dim xpnl_CanvasBackground As B4XView = xui.CreatePanel("")
-		Parent.AddView(xpnl_CanvasBackground,0,0,Parent.Width,Parent.Height)
-		xpnl_CanvasBackground.Color = xui.Color_Transparent
-	End If
 	
-	Dim BlockHeight As Float = (Parent.Height-m_WeekNameHeight)/6
+	Dim clr() As Int = GetARGB(m_SelectedDateColor)
+	
+	Dim BlockHeight As Float = (Parent.Height-g_WeekNameProperties.Height)/6
 	Dim BlockWidth As Float = IIf(m_ShowWeekNumbers,(xpnl_ViewPager.Width - g_WeekNumberProperties.Width)/7, xpnl_ViewPager.Width/7)
 	
 	If m_ShowWeekNumbers Then AddWeekName(Parent,-1,g_WeekNumberProperties.Text)
@@ -632,14 +895,9 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 	Dim FirstDay As Long = GetFirstDayOfWeek2(CurrentDate,m_FirstDayOfWeek)
 	
 	Dim CurrenMonth As Int = DateTime.GetMonth(CurrentDate)
-	
-	If m_ShowGridLines Then
-		Dim xcv As B4XCanvas
-		xcv.Initialize(xpnl_CanvasBackground)
-		xcv.ClearRect(xcv.TargetRect)
-	End If
 
 	Parent.Color = m_BodyColor
+'	Parent.Color = xui.Color_Red
 
 	For i = 1 To 43 -1
 		
@@ -650,8 +908,8 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 		
 		Dim xpnl_Date As B4XView = xui.CreatePanel("xpnl_MonthDate")
 		xpnl_Date.Tag = CurrentDay
-		xpnl_Date.Color = xui.Color_Transparent
-		Parent.AddView(xpnl_Date,IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*test),m_WeekNameHeight + (BlockHeight*Rest),BlockWidth,BlockHeight)
+		xpnl_Date.Color = xui.Color_Transparent'm_BodyColor
+		Parent.AddView(xpnl_Date,IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*test),g_WeekNameProperties.Height + (BlockHeight*Rest),BlockWidth,BlockHeight)
 		Dim xlbl_Date As B4XView = CreateLabel("")
 		xlbl_Date.Tag = "xlbl_Date"
 		xlbl_Date.Font = g_BodyProperties.xFont
@@ -681,16 +939,15 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 
 		If DateUtils.IsSameDay(DateTime.Now,CurrentDay) = True And xlbl_Date.Visible = True Then
 			Dim xpnl_CurrentDay As B4XView = xui.CreatePanel("")
-			Dim CurrentDayHeight As Float = 30dip
-			xpnl_CurrentDay.SetColorAndBorder(m_CurrentDateColor,0,0,CurrentDayHeight/2)
-			xpnl_Date.AddView(xpnl_CurrentDay,BlockWidth/2 - CurrentDayHeight/2,BlockHeight/2 - CurrentDayHeight/2,CurrentDayHeight,CurrentDayHeight)
+			xpnl_CurrentDay.SetColorAndBorder(m_CurrentDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
+			xpnl_Date.AddView(xpnl_CurrentDay,BlockWidth/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,BlockHeight/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
 		End If
 
 		'Create WeekNumbers
 		If m_ShowWeekNumbers = True Then
 			Dim xpnl_WeekNumber As B4XView = xui.CreatePanel("")
 			Dim xlbl_WeekNumber As B4XView = CreateLabel("")
-			Parent.AddView(xpnl_WeekNumber,0,m_WeekNameHeight + (BlockHeight*Rest),g_WeekNumberProperties.Width,BlockHeight)
+			Parent.AddView(xpnl_WeekNumber,0,g_WeekNameProperties.Height + (BlockHeight*Rest),g_WeekNumberProperties.Width,BlockHeight)
 			xpnl_WeekNumber.AddView(xlbl_WeekNumber,0,0,g_WeekNumberProperties.Width,BlockHeight)
 		
 			xpnl_WeekNumber.Color = g_WeekNumberProperties.Color
@@ -706,13 +963,27 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 	Next
 	
 	If m_ShowGridLines Then
+		Dim xpnl_CanvasBackground As B4XView = xui.CreatePanel("")
+		Parent.AddView(xpnl_CanvasBackground,0,0,Parent.Width,Parent.Height)
+		xpnl_CanvasBackground.Color = xui.Color_Transparent
+
+		#If B4I
+		xpnl_CanvasBackground.As(Panel).UserInteractionEnabled = False
+		#Else If B4J
+		xpnl_CanvasBackground.As(JavaObject).RunMethod("setMouseTransparent", Array As Object(True))
+		#End If
+
+		Dim xcv As B4XCanvas
+		xcv.Initialize(xpnl_CanvasBackground)
+		xcv.ClearRect(xcv.TargetRect)
+
 		For i = 0 To 6 -1 'Add Divider Vertical
 			xcv.DrawLine(IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*(i+1)),0,IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*(i+1)),Parent.Height,m_GridLineColor,1dip)
 		
-			If i < 5 Then xcv.DrawLine(0,m_WeekNameHeight + (BlockHeight*(i+1)),Parent.Width,m_WeekNameHeight + (BlockHeight*(i+1)),m_GridLineColor,1dip)
+			If i < 5 Then xcv.DrawLine(0,g_WeekNameProperties.Height + (BlockHeight*(i+1)),Parent.Width,g_WeekNameProperties.Height + (BlockHeight*(i+1)),m_GridLineColor,1dip)
 		Next
 	
-		xcv.DrawLine(IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0),m_WeekNameHeight,Parent.Width,m_WeekNameHeight,m_GridLineColor,1dip)
+		xcv.DrawLine(IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0),g_WeekNameProperties.Height,Parent.Width,g_WeekNameProperties.Height,m_GridLineColor,1dip)
 	
 		xcv.Invalidate
 	End If
@@ -751,9 +1022,8 @@ Private Sub AddYear(Parent As B4XView,CurrentDate As Long) 'Ignore
 			xpnl_Date = xui.CreatePanel("xpnl_DecadeYear")
 			xpnl_Date.Tag = DateUtils.SetDate(DateTime.GetYear(CurrentDate)+(i-1)*1,1,1)
 			If DateTime.GetYear(xpnl_Date.Tag) = DateTime.GetYear(DateTime.Now) Then SelectThisPanel = True
-			'Log(DateUtils.TicksToString(xpnl_Date.Tag))
 			
-			If (m_MaxDate > 0 Or m_MinDate > 0) And (DateTime.GetYear(xpnl_Date.Tag) > DateTime.GetYear(m_MaxDate)) Or (DateTime.GetYear(xpnl_Date.Tag) < DateTime.GetYear(m_MinDate)) Then
+			If (m_MaxDate > 0 Or m_MinDate > 0) And ((DateTime.GetYear(xpnl_Date.Tag) > DateTime.GetYear(m_MaxDate)) Or (DateTime.GetYear(xpnl_Date.Tag) < DateTime.GetYear(m_MinDate))) Then
 				xpnl_Date.Visible = False
 			End If
 			
@@ -786,12 +1056,6 @@ Private Sub AddYear(Parent As B4XView,CurrentDate As Long) 'Ignore
 		
 		xpnl_Date.AddView(xlbl_Date,0,0,BlockWidth,BlockHeight)
 
-'		If DateTime.GetYear(CurrentDate) And DateTime.GetYear(m_StartDate) Then
-'			Dim xpnl_CurrentDay As B4XView = xui.CreatePanel("")
-'			Dim CurrentDayHeight As Float = 30dip
-'			xpnl_CurrentDay.SetColorAndBorder(m_CurrentDateColor,0,0,CurrentDayHeight/2)
-'			xpnl_Date.AddView(xpnl_CurrentDay,BlockWidth/2 - CurrentDayHeight/2,BlockHeight/2 - CurrentDayHeight/2,CurrentDayHeight,CurrentDayHeight)
-'		End If
 		If SelectThisPanel Then
 			Dim xpnl_Current As B4XView = xui.CreatePanel("")
 			Dim StrokeWidth As Float = 2dip
@@ -864,14 +1128,17 @@ End Sub
 
 Private Sub CreateSelectDates(xpnl_Date As B4XView,clr() As Int)
 	'Dim Start As Long = DateTime.Now
-	Dim xlbl_Date As B4XView = xpnl_Date.GetView(0)
+	Dim xlbl_Date As B4XView
+	For Each View As B4XView In xpnl_Date.GetAllViewsRecursive
+		If "xlbl_Date" = View.Tag Then xlbl_Date = View
+	Next
 	Dim CurrentDay As Long = xpnl_Date.Tag
 	
 	If m_SelectMode = "Range" Then
 		If DateUtils.IsSameDay(CurrentDay,m_SelectedDate) And xlbl_Date.Visible Then
-			CreateSelecteDate(xpnl_Date,True)
+			CreateSelectedDate(xpnl_Date,True)
 		Else If DateUtils.IsSameDay(CurrentDay,m_SelectedDate2) And xlbl_Date.Visible Then
-			CreateSelecteDate(xpnl_Date,False)
+			CreateSelectedDate(xpnl_Date,False)
 		End If
 			
 		For Each v As B4XView In xpnl_Date.GetAllViewsRecursive
@@ -882,31 +1149,40 @@ Private Sub CreateSelectDates(xpnl_Date As B4XView,clr() As Int)
 		Next
 			
 		If m_SelectedDate > 0 And m_SelectedDate2 > 0 And ((CurrentDay >= m_SelectedDate And CurrentDay <= m_SelectedDate2) Or (DateUtils.IsSameDay(CurrentDay,m_SelectedDate) Or DateUtils.IsSameDay(CurrentDay,m_SelectedDate2))) Then
-			Dim CurrentDayHeight As Float = 30dip
 			Dim xpnl_selected As B4XView = xui.CreatePanel("")
 			xpnl_selected.Tag = "RangeItem"
 			If DateUtils.IsSameDay(CurrentDay,m_SelectedDate) Then
-				xpnl_Date.AddView(xpnl_selected,xpnl_Date.Width/2,xpnl_Date.Height/2 - CurrentDayHeight/2,xpnl_Date.Width/2,CurrentDayHeight)
+				xpnl_Date.AddView(xpnl_selected,xpnl_Date.Width/2,xpnl_Date.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_Date.Width/2,g_BodyProperties.CurrentAndSelectedDayHeight)
 			Else If DateUtils.IsSameDay(CurrentDay,m_SelectedDate2) Then
-				xpnl_Date.AddView(xpnl_selected,0,xpnl_Date.Height/2 - CurrentDayHeight/2,xpnl_Date.Width/2,CurrentDayHeight)
+				xpnl_Date.AddView(xpnl_selected,0,xpnl_Date.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_Date.Width/2,g_BodyProperties.CurrentAndSelectedDayHeight)
 			Else
-				xpnl_Date.AddView(xpnl_selected,0,xpnl_Date.Height/2 - CurrentDayHeight/2,xpnl_Date.Width,CurrentDayHeight)
+				xpnl_Date.AddView(xpnl_selected,0,xpnl_Date.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_Date.Width,g_BodyProperties.CurrentAndSelectedDayHeight)
 			End If
 				
 			xpnl_selected.Color = xui.Color_ARGB(80,clr(1),clr(2),clr(3))
 			xpnl_selected.SendToBack
 		End If
-			
 	Else
+		
 		If DateUtils.IsSameDay(CurrentDay,m_SelectedDate) And xlbl_Date.Visible = True  Then
 			MonthDateClick(xpnl_Date,False)
 		End If
+		
 	End If
+	
+	If DateUtils.IsSameDay(CurrentDay,m_SelectedDate) Or (m_SelectMode = getSelectMode_Range And DateUtils.IsSameDay(CurrentDay,m_SelectedDate2)) Then
+		xlbl_Date.TextColor = g_BodyProperties.SelectedTextColor
+	Else
+		xlbl_Date.TextColor = g_BodyProperties.TextColor
+	End If
+	
 	'Log((DateTime.Now-Start) & "ms")
 End Sub
 
 'Applies the header properties if any have been changed
 Public Sub RefreshHeader
+	
+	xpnl_Header.Color = m_HeaderColor
 	
 	Dim xlbl_Header As B4XView = xpnl_Header.GetView(0)
 	Dim xlbl_ArrowLeft As B4XView = xpnl_Header.GetView(1)
@@ -1044,8 +1320,9 @@ End Sub
 
 Public Sub setBodyColor(Color As Int)
 	m_BodyColor = Color
-	xASVP_Main.LoadingPanelColor = Color
-	xpnl_LoadingPanel.Color = Color
+	xpnl_LoadingPanel.Color = m_BodyColor
+	xASVP_Main.LoadingPanelColor = m_BodyColor
+	xASVP_Main.Base.Color = m_BodyColor
 End Sub
 'Call Refresh if you change something
 Public Sub getCurrentDateColor As Int
@@ -1082,7 +1359,6 @@ Public Sub Scroll2Date(Date As Long)
 	For i = 0 To xASVP_Main.Size -1
 		Dim StartDate As Long = xASVP_Main.GetValue(i)
 
-		
 		If DateTime.GetYear(StartDate) = DateTime.GetYear(Date) And DateTime.GetMonth(StartDate) = DateTime.GetMonth(Date) Then
 			ScrollIndex = i
 		End If
@@ -1161,6 +1437,10 @@ Public Sub setSelectMode(Mode As String)
 	m_SelectMode = Mode
 End Sub
 
+Public Sub getCurrentView As String
+	Return m_CurrentView
+End Sub
+
 #End Region
 
 #Region Enums
@@ -1197,6 +1477,20 @@ End Sub
 
 #Region Events
 
+Private Sub CustomDrawHeader(date As Long)
+	If xui.SubExists(mCallBack, mEventName & "_CustomDrawHeader", 2) Then
+		
+		Dim m_CustomDrawHeader As ASDatePicker_CustomDrawHeader
+		m_CustomDrawHeader.Initialize
+		m_CustomDrawHeader.BackgroundPanel = xpnl_Header
+		m_CustomDrawHeader.xlbl_Text = xpnl_Header.GetView(0)
+		m_CustomDrawHeader.xlbl_ArrowLeft = xpnl_Header.GetView(1)
+		m_CustomDrawHeader.xlbl_ArrowRight = xpnl_Header.GetView(2)
+		
+		CallSub3(mCallBack, mEventName & "_CustomDrawHeader",date,m_CustomDrawHeader)
+	End If
+End Sub
+
 Private Sub SelectedDateChanged(date As Long)
 	If xui.SubExists(mCallBack, mEventName & "_SelectedDateChanged", 1) Then
 		CallSub2(mCallBack, mEventName & "_SelectedDateChanged",date)
@@ -1228,9 +1522,19 @@ Private Sub CustomDrawDay(Date As Long,BackgroundPanel As B4XView)
 	End If
 End Sub
 
+Private Sub PageChanged
+	If xui.SubExists(mCallBack, mEventName & "_PageChanged", 0) Then
+		CallSub(mCallBack, mEventName & "_PageChanged")
+	End If
+End Sub
+
 #End Region
 
 #Region ViewEvents
+
+Private Sub xASVP_Main_PageChanged(Index As Int)
+	PageChanged
+End Sub
 
 Private Sub xASVP_Main_LazyLoadingAddContent(Parent As B4XView, Value As Object)
 	If m_CurrentView = getCurrentView_MonthView Then
@@ -1252,6 +1556,7 @@ Private Sub xASVP_Main_PageChange(Index As Int)
 	else if m_CurrentView = getCurrentView_CenturyView Then
 		xlbl_Header.Text = DateTime.GetYear(CurrentDate) & " - " & ((DateTime.GetYear(CurrentDate) +10*12)-1)
 	End If
+	CustomDrawHeader(CurrentDate)
 End Sub
 
 '**************Header*************
@@ -1349,21 +1654,28 @@ End Sub
 Private Sub xpnl_MonthDate_MouseEntered (EventData As MouseEvent)
 	Dim xpnl_MonthDate As B4XView = Sender
 	If m_MouseHoverFeedback = True Then
+		
+		If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized = True Then
+			xpnl_HoverDate.RemoveViewFromParent
+		End If
+		
 		Dim xlbl_Date As B4XView = xpnl_MonthDate.GetView(0)
 		If xlbl_Date.Visible = False Then Return
-	
-		If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized = True Then xpnl_HoverDate.RemoveViewFromParent
-		Dim CurrentDayHeight As Float = 30dip
-		Dim xpnl_selected As B4XView = xui.CreatePanel("")
-		xpnl_MonthDate.AddView(xpnl_selected,xpnl_MonthDate.Width/2 - CurrentDayHeight/2,xpnl_MonthDate.Height/2 - CurrentDayHeight/2,CurrentDayHeight,CurrentDayHeight)
-		xpnl_selected.SetColorAndBorder(m_SelectedDateColor,0,0,CurrentDayHeight/2)
-		xpnl_selected.SendToBack
-		xpnl_HoverDate = xpnl_selected
+		xpnl_HoverDate = xui.CreatePanel("")
+		xpnl_MonthDate.AddView(xpnl_HoverDate,xpnl_MonthDate.Width/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_MonthDate.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
+		xpnl_HoverDate.SetColorAndBorder(m_SelectedDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
+		xpnl_HoverDate.SendToBack
+		xlbl_Date.TextColor = g_BodyProperties.SelectedTextColor
 	End If
 End Sub
 
 Private Sub xpnl_MonthDate_MouseExited (EventData As MouseEvent)
-	If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized = True Then xpnl_HoverDate.RemoveViewFromParent
+	If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized = True Then 
+		For Each View As B4XView In xpnl_HoverDate.Parent.GetAllViewsRecursive
+			If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
+		Next
+		xpnl_HoverDate.RemoveViewFromParent
+	End If
 End Sub
 
 Private Sub xpnl_MonthDate_MouseClicked (EventData As MouseEvent)
@@ -1379,16 +1691,19 @@ Private Sub MonthDateClick(xpnl_MonthDate As B4XView,WithEvent As Boolean)
 	Dim CurrentDay As Long = xpnl_MonthDate.Tag
 	If (m_MaxDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) > DateUtils.SetDate(DateTime.GetYear(m_MaxDate),DateTime.GetMonth(m_MaxDate),DateTime.GetDayOfMonth(m_MaxDate))) Or (m_MinDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) < DateUtils.SetDate(DateTime.GetYear(m_MinDate),DateTime.GetMonth(m_MinDate),DateTime.GetDayOfMonth(m_MinDate))) Then Return
 	
-	Dim xlbl_Date As B4XView = xpnl_MonthDate.GetView(0)
+	Dim xlbl_Date As B4XView	
+	For Each View As B4XView In xpnl_MonthDate.GetAllViewsRecursive
+		If "xlbl_Date" = View.Tag Then xlbl_Date = View
+	Next
+	
 	If xlbl_Date.Visible = False Then Return
 	'Log(DateUtils.TicksToString(xpnl_MonthDate.Tag))
-	
 	If m_SelectMode = "Range" Then
 		If m_SelectedDate = 0 Or xpnl_MonthDate.Tag <= m_SelectedDate Then
 			If DateUtils.IsSameDay(m_SelectedDate,xpnl_MonthDate.Tag) = False Then
 				m_SelectedDate = xpnl_MonthDate.Tag
-				CreateSelecteDate(xpnl_MonthDate,True)
-				If m_SelectedDate > m_SelectedDate2 Then 
+				CreateSelectedDate(xpnl_MonthDate,True)
+				If m_SelectedDate > m_SelectedDate2 Then
 					If xpnl_SelectedDate2 <> Null And xpnl_SelectedDate2.IsInitialized = True Then xpnl_SelectedDate2.RemoveViewFromParent
 					m_SelectedDate2 = 0
 				End If
@@ -1399,7 +1714,7 @@ Private Sub MonthDateClick(xpnl_MonthDate As B4XView,WithEvent As Boolean)
 		Else
 			If DateUtils.IsSameDay(m_SelectedDate2,xpnl_MonthDate.Tag) = False Then
 				m_SelectedDate2 = xpnl_MonthDate.Tag
-				CreateSelecteDate(xpnl_MonthDate,False)
+				CreateSelectedDate(xpnl_MonthDate,False)
 			Else
 				If xpnl_SelectedDate2 <> Null And xpnl_SelectedDate2.IsInitialized = True Then xpnl_SelectedDate2.RemoveViewFromParent
 				m_SelectedDate2 = 0
@@ -1407,34 +1722,45 @@ Private Sub MonthDateClick(xpnl_MonthDate As B4XView,WithEvent As Boolean)
 		End If
 		RefreshSelectedDate
 	Else
-		CreateSelecteDate(xpnl_MonthDate,True)
+		CreateSelectedDate(xpnl_MonthDate,True)
 	End If
 	
-	If WithEvent = True Then 
+	xlbl_Date.TextColor = g_BodyProperties.SelectedTextColor
+	
+	If WithEvent = True Then
 		If m_SelectMode = "Range" And m_SelectedDate > 0 And m_SelectedDate2 > 0 Then
 			SelectedDateRangeChanged
-			Else
+		Else
 			SelectedDateChanged(xpnl_MonthDate.Tag)
 		End If
 	End If
 End Sub
 
-Private Sub CreateSelecteDate(xpnl_MonthDate As B4XView,FirstDatePanel As Boolean)
+Private Sub CreateSelectedDate(xpnl_MonthDate As B4XView,FirstDatePanel As Boolean)
 	
 	If FirstDatePanel Then
-		If xpnl_SelectedDate <> Null And xpnl_SelectedDate.IsInitialized = True Then xpnl_SelectedDate.RemoveViewFromParent
-		Dim CurrentDayHeight As Float = 30dip
+		If xpnl_SelectedDate <> Null And xpnl_SelectedDate.IsInitialized And xpnl_SelectedDate.Parent.IsInitialized Then
+			For Each View As B4XView In xpnl_SelectedDate.Parent.GetAllViewsRecursive
+				If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
+			Next
+			xpnl_SelectedDate.RemoveViewFromParent
+		End If
 		Dim xpnl_selected As B4XView = xui.CreatePanel("")
-		xpnl_MonthDate.AddView(xpnl_selected,xpnl_MonthDate.Width/2 - CurrentDayHeight/2,xpnl_MonthDate.Height/2 - CurrentDayHeight/2,CurrentDayHeight,CurrentDayHeight)
-		xpnl_selected.SetColorAndBorder(m_SelectedDateColor,0,0,CurrentDayHeight/2)
+		xpnl_MonthDate.AddView(xpnl_selected,xpnl_MonthDate.Width/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_MonthDate.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
+		xpnl_selected.SetColorAndBorder(m_SelectedDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
 		xpnl_selected.SendToBack
 		xpnl_SelectedDate = xpnl_selected
+		m_SelectedDate = xpnl_MonthDate.Tag
 	Else
-		If xpnl_SelectedDate2 <> Null And xpnl_SelectedDate2.IsInitialized = True Then xpnl_SelectedDate2.RemoveViewFromParent
-		Dim CurrentDayHeight As Float = 30dip
+		If xpnl_SelectedDate2 <> Null And xpnl_SelectedDate2.IsInitialized And xpnl_SelectedDate2.Parent.IsInitialized Then
+			For Each View As B4XView In xpnl_SelectedDate2.Parent.GetAllViewsRecursive
+				If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
+			Next
+			xpnl_SelectedDate2.RemoveViewFromParent
+		End If
 		Dim xpnl_selected As B4XView = xui.CreatePanel("")
-		xpnl_MonthDate.AddView(xpnl_selected,xpnl_MonthDate.Width/2 - CurrentDayHeight/2,xpnl_MonthDate.Height/2 - CurrentDayHeight/2,CurrentDayHeight,CurrentDayHeight)
-		xpnl_selected.SetColorAndBorder(m_SelectedDateColor,0,0,CurrentDayHeight/2)
+		xpnl_MonthDate.AddView(xpnl_selected,xpnl_MonthDate.Width/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_MonthDate.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
+		xpnl_selected.SetColorAndBorder(m_SelectedDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
 		xpnl_selected.SendToBack
 		xpnl_SelectedDate2 = xpnl_selected
 	End If
@@ -1539,8 +1865,14 @@ Private Sub MonthBetween(Date1 As Long, Date2 As Long) As Int
 	Dim y As Long = DateTime.GetYear(Date2) - DateTime.GetYear(Date1)
 	Dim m As Long = y * 12
 	m = m - DateTime.GetMonth(Date1)
-	m = m + DateTime.GetMonth(Date2)		
+	m = m + DateTime.GetMonth(Date2)
 	Return m
+End Sub
+
+Private Sub CreateImageView(EventName As String) As B4XView
+	Dim iv As ImageView
+	iv.Initialize(EventName)
+	Return iv
 End Sub
 
 #End Region
@@ -1579,14 +1911,6 @@ Public Sub CreateASDatePicker_WeekNameShort (Monday As String, Tuesday As String
 	Return t1
 End Sub
 
-Public Sub CreateASDatePicker_BodyProperties (xFont As B4XFont, TextColor As Int) As ASDatePicker_BodyProperties
-	Dim t1 As ASDatePicker_BodyProperties
-	t1.Initialize
-	t1.xFont = xFont
-	t1.TextColor = TextColor
-	Return t1
-End Sub
-
 Public Sub CreateASDatePicker_WeekNumberProperties (Width As Float, Color As Int, xFont As B4XFont, TextColor As Int, Text As String) As ASDatePicker_WeekNumberProperties
 	Dim t1 As ASDatePicker_WeekNumberProperties
 	t1.Initialize
@@ -1598,18 +1922,6 @@ Public Sub CreateASDatePicker_WeekNumberProperties (Width As Float, Color As Int
 	Return t1
 End Sub
 
-Public Sub CreateASDatePicker_WeekNameProperties (Color As Int, xFont As B4XFont, TextColor As Int) As ASDatePicker_WeekNameProperties
-	Dim t1 As ASDatePicker_WeekNameProperties
-	t1.Initialize
-	t1.Color = Color
-	t1.xFont = xFont
-	t1.TextColor = TextColor
-	Return t1
-End Sub
-#End Region
-
-
-
 Public Sub CreateASDatePicker_HeaderProperties (Height As Float, xFont As B4XFont, TextColor As Int, ButtonIconSize As Float, ArrowsVisible As Boolean) As ASDatePicker_HeaderProperties
 	Dim t1 As ASDatePicker_HeaderProperties
 	t1.Initialize
@@ -1620,3 +1932,25 @@ Public Sub CreateASDatePicker_HeaderProperties (Height As Float, xFont As B4XFon
 	t1.ArrowsVisible = ArrowsVisible
 	Return t1
 End Sub
+
+Public Sub CreateASDatePicker_WeekNameProperties (Color As Int, xFont As B4XFont, TextColor As Int, Height As Float) As ASDatePicker_WeekNameProperties
+	Dim t1 As ASDatePicker_WeekNameProperties
+	t1.Initialize
+	t1.Color = Color
+	t1.xFont = xFont
+	t1.TextColor = TextColor
+	t1.Height = Height
+	Return t1
+End Sub
+
+Public Sub CreateASDatePicker_BodyProperties (xFont As B4XFont, TextColor As Int, SelectedTextColor As Int, CurrentAndSelectedDayHeight As Float) As ASDatePicker_BodyProperties
+	Dim t1 As ASDatePicker_BodyProperties
+	t1.Initialize
+	t1.xFont = xFont
+	t1.TextColor = TextColor
+	t1.SelectedTextColor = SelectedTextColor
+	t1.CurrentAndSelectedDayHeight = CurrentAndSelectedDayHeight
+	Return t1
+End Sub
+#End Region
+

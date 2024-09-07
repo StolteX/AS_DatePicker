@@ -18,7 +18,7 @@ NumberOfModules=3
 Version=12.2
 @EndOfDesignText@
 #Region  Project Attributes 
-	#ApplicationLabel: B4A Example
+	#ApplicationLabel: AS DatePicker Example
 	#VersionCode: 1
 	#VersionName: 
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
