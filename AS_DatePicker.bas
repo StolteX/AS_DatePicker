@@ -107,6 +107,9 @@ V1.27
 		-Add get Theme_Light
 	-Add Designer Property ThemeChangeTransition
 		-Default: Fade
+V1.28
+	-Add ClearSelections - Deselect the selections
+		-Updated the description text of the set Selection properties
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -1372,7 +1375,9 @@ Public Sub Scroll2Date(Date As Long)
 		CreateMonthView
 	End If
 End Sub
+
 'Call Refresh if you change something
+'To deselect, call ClearSelections
 Public Sub setSelectedDate(Date As Long)
 	m_SelectedDate = Date
 End Sub
@@ -1380,7 +1385,9 @@ End Sub
 Public Sub getSelectedDate As Long
 	Return m_SelectedDate
 End Sub
+
 'Call Refresh if you change something
+'To deselect, call ClearSelections
 Public Sub getSelectedStartDate As Long
 	Return m_SelectedDate
 End Sub
@@ -1390,6 +1397,7 @@ Public Sub setSelectedStartDate(Date As Long)
 End Sub
 'Call Refresh if you change something
 'Only in SelectMode "Range"
+'To deselect, call ClearSelections
 Public Sub getSelectedEndDate As Long
 	Return m_SelectedDate2
 End Sub
@@ -1397,6 +1405,14 @@ End Sub
 Public Sub setSelectedEndDate(Date As Long)
 	 m_SelectedDate2 = Date
 End Sub
+
+'Deselect the selections
+'Call Refresh to apply the change
+Public Sub ClearSelections
+	m_SelectedDate = 0
+	m_SelectedDate2 = 0
+End Sub
+
 'Call Refresh if you change something
 Public Sub getBodyProperties As ASDatePicker_BodyProperties
 	Return g_BodyProperties

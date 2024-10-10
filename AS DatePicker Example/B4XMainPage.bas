@@ -48,8 +48,8 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 '	Sleep(4000)
 '	AS_DatePicker1.Theme = AS_DatePicker1.Theme_Dark
 
-	AS_DatePicker1.SelectedDate = DateUtils.SetDate(2024,9,1)
-	AS_DatePicker1.Scroll2Date(DateUtils.SetDate(2024,9,1))
+'	AS_DatePicker1.SelectedDate = DateUtils.SetDate(2024,9,1)
+'	AS_DatePicker1.Scroll2Date(DateUtils.SetDate(2024,9,1))
 	Dim Dark As AS_DatePicker_Theme = AS_DatePicker1.Theme_Dark
 	Dark.BodyColor = Root.Color
 	Dark.HeaderColor = Root.Color
@@ -58,6 +58,7 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Dark.SelectedDateColor = xui.Color_White
 	Dark.CurrentDateColor = xui.Color_ARGB(80,255,255,255)
 	AS_DatePicker1.Theme = Dark
+
 
 End Sub
 

@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=1
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=AS_DatePicker,ChangeView,1063,0,AS_DatePicker,AddMonth,963,4,AS_DatePicker,Class_Globals,133,0,AS_DatePicker,CreateSelectDates,1119,6,AS_DatePicker,CreateSelectedDate,1727,0,B4XMainPage,Class_Globals,7,0,AS_DatePicker,MonthDateClick,1683,0,AS_DatePicker,xpnl_CenturyDecade_MouseClicked,1642,0,AS_DatePicker,xpnl_MonthDate_MouseExited,1669,0,AS_DatePicker,xpnl_MonthDate_MouseEntered,1648,3
+NavigationStack=AS_DatePicker,xpnl_MonthDate_MouseExited,1669,0,AS_DatePicker,xpnl_MonthDate_MouseEntered,1648,3,Visual Designer,frm_main.bjl,-100,2,AS_DatePicker,getSelectedEndDate,1386,0,AS_DatePicker,setSelectedStartDate,1386,0,AS_DatePicker,getSelectedDate,1378,0,AS_DatePicker,Scroll2Date,1368,0,AS_DatePicker,ClearSelections,1402,0,AS_DatePicker,setSelectedEndDate,1399,0,B4XMainPage,B4XPage_Created,43,6
 SelectedBuild=0
 VisibleModules=2,1
