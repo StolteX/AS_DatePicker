@@ -110,6 +110,8 @@ V1.27
 V1.28
 	-Add ClearSelections - Deselect the selections
 		-Updated the description text of the set Selection properties
+V1.29
+	-BugFix B4J - The CustomDrawDay event is now also triggered when leaving the mouse at a day, e.g. if you have colored the text color day of month
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -881,8 +883,6 @@ End Sub
 
 Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 	
-	Dim clr() As Int = GetARGB(m_SelectedDateColor)
-	
 	Dim BlockHeight As Float = (Parent.Height-g_WeekNameProperties.Height)/6
 	Dim BlockWidth As Float = IIf(m_ShowWeekNumbers,(xpnl_ViewPager.Width - g_WeekNumberProperties.Width)/7, xpnl_ViewPager.Width/7)
 	
@@ -896,9 +896,8 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 	AddWeekName(Parent,6,g_WeekNameShort.Sunday)
 	
 	Dim FirstDay As Long = GetFirstDayOfWeek2(CurrentDate,m_FirstDayOfWeek)
-	
-	Dim CurrenMonth As Int = DateTime.GetMonth(CurrentDate)
 
+	Parent.Tag = CurrentDate
 	Parent.Color = m_BodyColor
 '	Parent.Color = xui.Color_Red
 
@@ -911,47 +910,15 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 		
 		Dim xpnl_Date As B4XView = xui.CreatePanel("xpnl_MonthDate")
 		xpnl_Date.Tag = CurrentDay
-		xpnl_Date.Color = xui.Color_Transparent'm_BodyColor
 		Parent.AddView(xpnl_Date,IIf(m_ShowWeekNumbers,g_WeekNumberProperties.Width,0) + (BlockWidth*test),g_WeekNameProperties.Height + (BlockHeight*Rest),BlockWidth,BlockHeight)
-		Dim xlbl_Date As B4XView = CreateLabel("")
-		xlbl_Date.Tag = "xlbl_Date"
-		xlbl_Date.Font = g_BodyProperties.xFont
-		xlbl_Date.TextColor = g_BodyProperties.TextColor
-		xlbl_Date.SetTextAlignment("CENTER","CENTER")
-		xlbl_Date.Text = DateTime.GetDayOfMonth(CurrentDay)
-		
-		
-		xpnl_Date.AddView(xlbl_Date,0,0,BlockWidth,BlockHeight)
-
-		If DateTime.GetMonth(CurrentDay) <> CurrenMonth Then
-			If m_InactiveDaysVisible = False Then
-				xlbl_Date.Visible = False
-			Else
-				Dim Color() As Int = GetARGB(g_BodyProperties.TextColor)
-				xlbl_Date.TextColor = xui.Color_ARGB(100,Color(1),Color(2),Color(3))
-			End If
-		End If
-
-		If (m_MaxDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) > DateUtils.SetDate(DateTime.GetYear(m_MaxDate),DateTime.GetMonth(m_MaxDate),DateTime.GetDayOfMonth(m_MaxDate))) Or (m_MinDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) < DateUtils.SetDate(DateTime.GetYear(m_MinDate),DateTime.GetMonth(m_MinDate),DateTime.GetDayOfMonth(m_MinDate))) Then
-			xlbl_Date.Visible = False
-		End If
-
-		
-
-		CreateSelectDates(xpnl_Date,clr)
-
-		If DateUtils.IsSameDay(DateTime.Now,CurrentDay) = True And xlbl_Date.Visible = True Then
-			Dim xpnl_CurrentDay As B4XView = xui.CreatePanel("")
-			xpnl_CurrentDay.SetColorAndBorder(m_CurrentDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
-			xpnl_Date.AddView(xpnl_CurrentDay,BlockWidth/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,BlockHeight/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
-		End If
+		BuildDay(CurrentDay,xpnl_Date)
 
 		'Create WeekNumbers
 		If m_ShowWeekNumbers = True Then
 			Dim xpnl_WeekNumber As B4XView = xui.CreatePanel("")
 			Dim xlbl_WeekNumber As B4XView = CreateLabel("")
 			Parent.AddView(xpnl_WeekNumber,0,g_WeekNameProperties.Height + (BlockHeight*Rest),g_WeekNumberProperties.Width,BlockHeight)
-			xpnl_WeekNumber.AddView(xlbl_WeekNumber,0,0,g_WeekNumberProperties.Width,BlockHeight)
+			xpnl_WeekNumber.AddView(xlbl_WeekNumber,0,0,g_WeekNumberProperties.Width,xpnl_Date.Height)
 		
 			xpnl_WeekNumber.Color = g_WeekNumberProperties.Color
 		
@@ -960,8 +927,6 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 			xlbl_WeekNumber.Font = g_WeekNumberProperties.xFont
 			xlbl_WeekNumber.Text = GetWeekNumberStartingFromMonday(CurrentDay)
 		End If
-
-		CustomDrawDay(CurrentDay,xpnl_Date)
 
 	Next
 	
@@ -991,6 +956,48 @@ Private Sub AddMonth(Parent As B4XView,CurrentDate As Long)
 		xcv.Invalidate
 	End If
 	
+End Sub
+
+Private Sub BuildDay(CurrentDay As Long,xpnl_Date As B4XView)
+	
+	Dim clr() As Int = GetARGB(m_SelectedDateColor)
+	
+	xpnl_Date.Color = xui.Color_Transparent'm_BodyColor
+	
+	Dim xlbl_Date As B4XView = CreateLabel("")
+	xlbl_Date.Tag = "xlbl_Date"
+	xlbl_Date.Font = g_BodyProperties.xFont
+	xlbl_Date.TextColor = g_BodyProperties.TextColor
+	xlbl_Date.SetTextAlignment("CENTER","CENTER")
+	xlbl_Date.Text = DateTime.GetDayOfMonth(CurrentDay)
+		
+		
+	xpnl_Date.AddView(xlbl_Date,0,0,xpnl_Date.Width,xpnl_Date.Height)
+
+	If DateTime.GetMonth(CurrentDay) <> DateTime.GetMonth(xpnl_Date.Parent.Tag) Then
+		If m_InactiveDaysVisible = False Then
+			xlbl_Date.Visible = False
+		Else
+			Dim Color() As Int = GetARGB(g_BodyProperties.TextColor)
+			xlbl_Date.TextColor = xui.Color_ARGB(100,Color(1),Color(2),Color(3))
+		End If
+	End If
+
+	If (m_MaxDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) > DateUtils.SetDate(DateTime.GetYear(m_MaxDate),DateTime.GetMonth(m_MaxDate),DateTime.GetDayOfMonth(m_MaxDate))) Or (m_MinDate > 0 And DateUtils.SetDate(DateTime.GetYear(CurrentDay),DateTime.GetMonth(CurrentDay),DateTime.GetDayOfMonth(CurrentDay)) < DateUtils.SetDate(DateTime.GetYear(m_MinDate),DateTime.GetMonth(m_MinDate),DateTime.GetDayOfMonth(m_MinDate))) Then
+		xlbl_Date.Visible = False
+	End If
+
+		
+
+	CreateSelectDates(xpnl_Date,clr)
+
+	If DateUtils.IsSameDay(DateTime.Now,CurrentDay) = True And xlbl_Date.Visible = True Then
+		Dim xpnl_CurrentDay As B4XView = xui.CreatePanel("")
+		xpnl_CurrentDay.SetColorAndBorder(m_CurrentDateColor,0,0,g_BodyProperties.CurrentAndSelectedDayHeight/2)
+		xpnl_Date.AddView(xpnl_CurrentDay,xpnl_Date.Width/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,xpnl_Date.Height/2 - g_BodyProperties.CurrentAndSelectedDayHeight/2,g_BodyProperties.CurrentAndSelectedDayHeight,g_BodyProperties.CurrentAndSelectedDayHeight)
+	End If
+
+	CustomDrawDay(CurrentDay,xpnl_Date)
 End Sub
 
 Private Sub AddYear(Parent As B4XView,CurrentDate As Long) 'Ignore
@@ -1690,6 +1697,11 @@ Private Sub xpnl_MonthDate_MouseExited (EventData As MouseEvent)
 		For Each View As B4XView In xpnl_HoverDate.Parent.GetAllViewsRecursive
 			If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
 		Next
+		If xui.SubExists(mCallBack, mEventName & "_CustomDrawDay", 2) Then
+			Dim xpnl_MonthDate As B4XView =xpnl_HoverDate.Parent
+			xpnl_MonthDate.RemoveAllViews
+			BuildDay(xpnl_MonthDate.Tag,xpnl_MonthDate)
+		End If
 		xpnl_HoverDate.RemoveViewFromParent
 	End If
 End Sub

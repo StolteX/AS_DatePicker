@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=4
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=AS_DatePicker,AddYear,1055,0,AS_DatePicker,xASVP_Main_PageChange,1542,6,AS_DatePicker,xASVP_Main_LazyLoadingAddContent,1541,0,AS_DatePicker,xASVP_Main_PageChanged2,480,5,AS_DatePicker,CreateMonthView,576,4,B4XMainPage,AS_DatePicker1_SelectedDateChanged,51,0,B4XMainPage,AS_DatePicker1_PageChanged,68,0,Visual Designer,frm_main.bil,-100,6,B4XMainPage,B4XPage_Created,42,6
+NavigationStack=AS_DatePicker,getTheme_Light,261,0,AS_DatePicker,setTheme,211,0,AS_DatePicker,Class_Globals,136,0,AS_DatePicker,CreateSelectedDate,1777,0,AS_DatePicker,MonthDateClick,1699,0,AS_DatePicker,xpnl_CenturyDecade_Click,1677,0,AS_DatePicker,CreateSelectDates,1170,0,AS_DatePicker,AddMonth,882,0,Visual Designer,frm_main.bil,-100,2,AS_DatePicker,CreateCenturyView,867,0,B4XMainPage,B4XPage_Created,49,1
 SelectedBuild=0
 VisibleModules=2,1

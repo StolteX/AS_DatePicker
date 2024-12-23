@@ -92,3 +92,9 @@ Private Sub Switch1_ValueChanged (Value As Boolean)
 		AS_DatePicker1.Theme = AS_DatePicker1.Theme_Light
 	End If
 End Sub
+
+Private Sub AS_DatePicker1_CustomDrawDay (Date As Long, Views As ASDatePicker_CustomDrawDay)
+	If DateTime.GetDayOfWeek(Date) = 1 Then 'Sunday
+		Views.xlbl_Date.TextColor = xui.Color_Red
+	End If
+End Sub
