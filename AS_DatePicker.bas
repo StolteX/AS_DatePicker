@@ -112,6 +112,8 @@ V1.28
 		-Updated the description text of the set Selection properties
 V1.29
 	-BugFix B4J - The CustomDrawDay event is now also triggered when leaving the mouse at a day, e.g. if you have colored the text color day of month
+V1.30
+	-BugFixes
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -227,12 +229,12 @@ Public Sub setTheme(Theme As AS_DatePicker_Theme)
 	RefreshHeader
 	Refresh
 	
-	Sleep(250)
-	
 	Select m_ThemeChangeTransition
 		Case "None"
+			Sleep(0)
 			xiv_RefreshImage.SetVisibleAnimated(0,False)
 		Case "Fade"
+			Sleep(250)
 			xiv_RefreshImage.SetVisibleAnimated(250,False)
 	End Select
 	
@@ -1180,12 +1182,6 @@ Private Sub CreateSelectDates(xpnl_Date As B4XView,clr() As Int)
 		
 	End If
 	
-	If DateUtils.IsSameDay(CurrentDay,m_SelectedDate) Or (m_SelectMode = getSelectMode_Range And DateUtils.IsSameDay(CurrentDay,m_SelectedDate2)) Then
-		xlbl_Date.TextColor = g_BodyProperties.SelectedTextColor
-	Else
-		xlbl_Date.TextColor = g_BodyProperties.TextColor
-	End If
-	
 	'Log((DateTime.Now-Start) & "ms")
 End Sub
 
@@ -1698,7 +1694,7 @@ Private Sub xpnl_MonthDate_MouseExited (EventData As MouseEvent)
 			If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
 		Next
 		If xui.SubExists(mCallBack, mEventName & "_CustomDrawDay", 2) Then
-			Dim xpnl_MonthDate As B4XView =xpnl_HoverDate.Parent
+			Dim xpnl_MonthDate As B4XView = xpnl_HoverDate.Parent
 			xpnl_MonthDate.RemoveAllViews
 			BuildDay(xpnl_MonthDate.Tag,xpnl_MonthDate)
 		End If
@@ -1762,6 +1758,12 @@ Private Sub MonthDateClick(xpnl_MonthDate As B4XView,WithEvent As Boolean)
 			SelectedDateChanged(xpnl_MonthDate.Tag)
 		End If
 	End If
+	
+	If xui.SubExists(mCallBack, mEventName & "_CustomDrawDay", 2) Then
+		xpnl_MonthDate.RemoveAllViews
+		BuildDay(xpnl_MonthDate.Tag,xpnl_MonthDate)
+	End If
+	
 End Sub
 
 Private Sub CreateSelectedDate(xpnl_MonthDate As B4XView,FirstDatePanel As Boolean)
