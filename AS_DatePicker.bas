@@ -114,6 +114,8 @@ V1.29
 	-BugFix B4J - The CustomDrawDay event is now also triggered when leaving the mouse at a day, e.g. if you have colored the text color day of month
 V1.30
 	-BugFixes
+V1.31
+	-BugFix for B4J
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -1689,7 +1691,7 @@ Private Sub xpnl_MonthDate_MouseEntered (EventData As MouseEvent)
 End Sub
 
 Private Sub xpnl_MonthDate_MouseExited (EventData As MouseEvent)
-	If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized = True Then 
+	If xpnl_HoverDate <> Null And xpnl_HoverDate.IsInitialized And xpnl_HoverDate.Parent <> Null And xpnl_HoverDate.Parent.IsInitialized Then
 		For Each View As B4XView In xpnl_HoverDate.Parent.GetAllViewsRecursive
 			If "xlbl_Date" = View.Tag Then View.TextColor = g_BodyProperties.TextColor
 		Next

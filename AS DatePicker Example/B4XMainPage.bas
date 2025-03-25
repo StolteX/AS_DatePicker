@@ -57,6 +57,7 @@ Private Sub B4XPage_Created (Root1 As B4XView)
 	Dark.WeekNameColor = Root.Color
 	Dark.SelectedDateColor = xui.Color_White
 	Dark.CurrentDateColor = xui.Color_ARGB(80,255,255,255)
+	
 	AS_DatePicker1.Theme = Dark
 
 
