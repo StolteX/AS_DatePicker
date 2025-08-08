@@ -10,6 +10,6 @@ ModuleClosedNodes0=6
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
 ModuleClosedNodes3=1
-NavigationStack=B4XMainPage,B4XPage_Created,24,5,Visual Designer,frm_main.bal,-100,3,B4XMainPage,Class_Globals,10,0,AS_DatePicker,xASVP_Main_PageChanged2,431,0,AS_DatePicker,CreateMonthView,436,4
+NavigationStack=B4XMainPage,B4XPage_Created,24,5,Visual Designer,frm_main.bal,-100,3,B4XMainPage,Class_Globals,10,0,AS_DatePicker,xASVP_Main_PageChanged2,431,0,AS_DatePicker,CreateMonthView,436,4,AS_DatePicker,AddWeekName,436,0
 SelectedBuild=0
 VisibleModules=2,1

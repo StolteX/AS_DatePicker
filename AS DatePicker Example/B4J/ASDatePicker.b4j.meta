@@ -7,6 +7,6 @@ ModuleBreakpoints2=
 ModuleClosedNodes0=1
 ModuleClosedNodes1=
 ModuleClosedNodes2=1
-NavigationStack=B4XMainPage,AS_DatePicker1_CustomDrawDay,89,6,B4XMainPage,Switch1_ValueChanged,84,0,AS_DatePicker,CustomDrawDay,1516,0,AS_DatePicker,xpnl_MonthDate_MouseEntered,1675,5,AS_DatePicker,xpnl_MonthDate_MouseExited,1690,6,AS_DatePicker,IniProps,331,0,AS_DatePicker,MonthDateClick,1720,0,AS_DatePicker,AddMonth,893,4,AS_DatePicker,BuildDay,962,6,AS_DatePicker,setTheme,222,0,AS_DatePicker,Class_Globals,136,0
+NavigationStack=AS_DatePicker,BuildDay,962,6,AS_DatePicker,setTheme,222,0,AS_DatePicker,MonthDateClick,1760,0,AS_DatePicker,getTheme_Dark,241,0,AS_DatePicker,CreateHeader,426,0,AS_DatePicker,IniProps,338,6,AS_DatePicker,xlbl_Header_MouseClicked,1612,6,Visual Designer,frm_main.bjl,-100,6,AS_DatePicker,Class_Globals,192,4,AS_DatePicker,DesignerCreateView,313,3,AS_DatePicker,CreateSelectDates,1153,0
 SelectedBuild=0
 VisibleModules=2,1

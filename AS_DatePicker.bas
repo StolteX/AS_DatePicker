@@ -116,6 +116,9 @@ V1.30
 	-BugFixes
 V1.31
 	-BugFix for B4J
+V1.32
+	-New MaxViewLevel Desinger Property - Defines the highest level of calendar views the user can navigate to when clicking the header (e.g., from month to year to decade).
+		-Default: CenturyView
 #End If
 
 #DesignerProperty: Key: ThemeChangeTransition, DisplayName: ThemeChangeTransition, FieldType: String, DefaultValue: Fade, List: None|Fade
@@ -133,6 +136,7 @@ V1.31
 
 #DesignerProperty: Key: ShowGridLines, DisplayName: ShowGridLines, FieldType: Boolean, DefaultValue: False
 #DesignerProperty: Key: GridLineColor, DisplayName: GridLineColor, FieldType: Color, DefaultValue: 0x50FFFFFF
+#DesignerProperty: Key: MaxViewLevel, DisplayName: MaxViewLevel, FieldType: String, DefaultValue: CenturyView, List: MonthView|YearView|DecadeView|CenturyView , Description: Defines the highest level of calendar views the user can navigate to when clicking the header (from month to year to decade)
 
 #Event: SelectedDateChanged(Date As Long)
 #Event: SelectedDateRangeChanged(StartDate As Long, EndDate As Long)
@@ -191,6 +195,7 @@ Sub Class_Globals
 	Private m_ShowGridLines As Boolean
 	Private m_GridLineColor As Int
 	Private m_ThemeChangeTransition As String
+	Private m_MaxViewLevel As String
 	
 	Private m_CurrentView As String
 	Private m_StartDate As Long
@@ -346,6 +351,7 @@ Private Sub IniProps(Props As Map)
 	m_ShowGridLines = Props.GetDefault("ShowGridLines",False)
 	m_GridLineColor = xui.PaintOrColorToColor(Props.GetDefault("GridLineColor",0x50FFFFFF))
 	m_ThemeChangeTransition = Props.GetDefault("ThemeChangeTransition","Fade")
+	m_MaxViewLevel = Props.GetDefault("MaxViewLevel","CenturyView")
 	
 	If "Friday" = Props.Get("FirstDayOfWeek") Then
 		m_FirstDayOfWeek = 1
@@ -1605,13 +1611,16 @@ Private Sub xlbl_Header_MouseClicked (EventData As MouseEvent)
 #Else
 Private Sub xlbl_Header_Click
 #End If
-	If m_CurrentView = getCurrentView_MonthView Then
-		ChangeView(getCurrentView_YearView)
-	else If m_CurrentView = getCurrentView_YearView Then
-		ChangeView(getCurrentView_DecadeView)
-	else If m_CurrentView = getCurrentView_DecadeView Then
-		ChangeView(getCurrentView_CenturyView)
-	End If
+
+	Select m_CurrentView
+		Case getCurrentView_MonthView
+			If m_MaxViewLevel <> getCurrentView_MonthView Then ChangeView(getCurrentView_YearView)
+		Case getCurrentView_YearView
+			If m_MaxViewLevel <> getCurrentView_YearView Then ChangeView(getCurrentView_DecadeView)
+		Case getCurrentView_DecadeView
+			If m_MaxViewLevel <> getCurrentView_DecadeView Then ChangeView(getCurrentView_CenturyView)
+	End Select
+
 End Sub
 
 #IF B4J
@@ -1762,8 +1771,11 @@ Private Sub MonthDateClick(xpnl_MonthDate As B4XView,WithEvent As Boolean)
 	End If
 	
 	If xui.SubExists(mCallBack, mEventName & "_CustomDrawDay", 2) Then
-		xpnl_MonthDate.RemoveAllViews
-		BuildDay(xpnl_MonthDate.Tag,xpnl_MonthDate)
+		'xpnl_MonthDate.RemoveAllViews
+		'BuildDay(xpnl_MonthDate.Tag,xpnl_MonthDate)
+		
+		'https://www.b4x.com/android/forum/threads/app-crash-when-using-as_datepicker-and-as_datepicker1_customdrawday-function.167208/#post-1025231
+		CustomDrawDay(CurrentDay,xpnl_MonthDate)
 	End If
 	
 End Sub
